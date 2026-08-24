@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Test Page</title>
+
+  <style>
+    /* This is the CSS section - it controls how things look */
+
+    body {
+      /* Center everything on the page and add some spacing */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+
+      /* This is the starting background color. Our JavaScript will change this later! */
+      background-color: #f0f0f0;
+
+      /* Smoothly animate color changes instead of snapping instantly */
+      transition: background-color 0.3s ease;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    button {
+      padding: 20px 40px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #4a90e2;
+      color: white;
+    }
+
+    button:hover {
+      background-color: #bd353c;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Heading with my name -->
+  <h1>Ethan Dunn</h1>
+
+  <!-- Button that will trigger the color change when clicked -->
+  <!-- The onclick attribute tells the browser: "when this is clicked, run the changeColor() function" -->
+  <button onclick="changeColor()">Click Me!</button>
+
+  <script>
+    // This is the JavaScript section - it controls what happens when things are interacted with
+
+    // A list (array) of colors to choose from
+    const colors = ["#f0f0f0", "#ffe0e0", "#e0f7ff", "#e0ffe0", "#fff5cc", "#f0e0ff"];
+
+    // This function runs every time the button is clicked
+    function changeColor() {
+      // Pick a random color from the colors list
+      const randomIndex = Math.floor(Math.random() * colors.length);
+      const randomColor = colors[randomIndex];
+
+      // Change the page's background color to the random color we picked
+      document.body.style.backgroundColor = randomColor;
+    }
+  </script>
+
+</body>
+</html>
