@@ -1,73 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Simple Test Page</title>
+<meta charset="UTF-8">
+<title>Should I Recycle This?</title>
+<style>
+  /* Dark theme colors, defined once so they're easy to change later */
+  :root {
+    --bg-color: #0b0f14;       /* near-black background */
+    --blue-accent: #4da6ff;    /* used for title + input border */
+    --green-accent: #4caf50;   /* used for button */
+    --text-color: #e6e6e6;
+  }
 
-  <style>
-    /* This is the CSS section - it controls how things look */
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+    /* A more colorful dark gradient: blue -> teal -> green -> purple */
+    background: linear-gradient(135deg, #0d1b3d 0%, #0a2b3d 30%, #0b3d2b 60%, #1e0b3d 100%);
+    color: var(--text-color);
+  }
 
-    body {
-      /* Center everything on the page and add some spacing */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      font-family: Arial, sans-serif;
+  h1 {
+    font-size: 3rem;
+    /* Title text itself fades from blue to green */
+    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
 
-      /* This is the starting background color. Our JavaScript will change this later! */
-      background-color: #d61111;
+  /* Groups the input and button together, sized to fill most of the page */
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    width: 80%;
+    max-width: 700px;
+  }
 
-      /* Smoothly animate color changes instead of snapping instantly */
-      transition: background-color 0.3s ease;
-    }
+  #itemInput {
+    padding: 1.25rem 1.5rem;
+    font-size: 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid var(--blue-accent);
+    border-radius: 12px;
+    background-color: #1a1f26;
+    color: var(--text-color);
+  }
 
-    h1 {
-      color: #333;
-    }
+  #itemInput:focus {
+    outline: none;
+    border-color: var(--green-accent);
+  }
 
-    button {
-      padding: 30px 50px;
-      font-size: 30px;
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      background-color: #4a90e2;
-      color: white;
-    }
+  #submitBtn {
+    padding: 1.5rem 2rem;
+    font-size: 1.75rem;
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    /* Blue-to-green fade on the button */
+    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+  }
 
-    button:hover {
-      background-color: #bd353c;
-    }
-  </style>
+  #submitBtn:hover {
+    filter: brightness(1.15);
+  }
+
+  #resultText {
+    margin-top: 2rem;
+    font-size: 1.25rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Spinning wheel shown while "thinking" */
+  .spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--green-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Button at the top that opens the history sidebar */
+  #historyBtn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    padding: 0.6rem 1.1rem;
+    font-size: 1rem;
+    border: 2px solid var(--green-accent);
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+  }
+
+  #historyBtn:hover {
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+
+  /* Sidebar that slides in from the right */
+  #historySidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 280px;
+    background-color: #10151c;
+    border-left: 2px solid var(--blue-accent);
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.4);
+    padding: 2rem 1.5rem;
+    box-sizing: border-box;
+    /* Hidden off-screen until the "open" class is added */
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  #historySidebar.open {
+    transform: translateX(0);
+  }
+
+  #historySidebar h2 {
+    font-size: 1.25rem;
+    color: var(--green-accent);
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+
+  /* Arrow button inside the sidebar that closes it */
+  #closeSidebarBtn {
+    background: none;
+    border: none;
+    color: var(--blue-accent);
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+  }
+
+  #historyList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: #aaa;
+  }
+</style>
 </head>
 <body>
+  <!-- Button at the top that opens the past-recycles sidebar -->
+  <button id="historyBtn">History</button>
 
-  <!-- Heading with my name -->
-  <h1>Ethan Dunn</h1>
+  <h1>Should I Recycle This?</h1>
 
-  <!-- Button that will trigger the color change when clicked -->
-  <!-- The onclick attribute tells the browser: "when this is clicked, run the changeColor() function" -->
-  <button onclick="changeColor()">Click Me!</button>
+  <div class="form-container">
+    <!-- Text input where the user types an item name -->
+    <input type="text" id="itemInput" placeholder="Enter an item">
+
+    <!-- Submit button -->
+    <button id="submitBtn">Check</button>
+
+    <!-- Placeholder text shown after clicking submit; empty until then -->
+    <p id="resultText"></p>
+  </div>
+
+  <!-- Sidebar showing past recycled items; hidden until the History button is clicked -->
+  <div id="historySidebar">
+    <!-- Arrow to close the sidebar -->
+    <button id="closeSidebarBtn">&rarr;</button>
+    <h2>Past Recycles</h2>
+    <ul id="historyList">
+      <li>You have none yet</li>
+    </ul>
+  </div>
 
   <script>
-    // This is the JavaScript section - it controls what happens when things are interacted with
+    const itemInput = document.getElementById('itemInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultText = document.getElementById('resultText');
+    const historyBtn = document.getElementById('historyBtn');
+    const historySidebar = document.getElementById('historySidebar');
+    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
 
-    // A list (array) of colors to choose from
-    const colors = ["#f0f0f0", "#ffe0e0", "#e0f7ff", "#e0ffe0", "#fff5cc", "#f0e0ff"];
+    // Open the sidebar when the History button is clicked
+    historyBtn.addEventListener('click', () => {
+      historySidebar.classList.add('open');
+    });
 
-    // This function runs every time the button is clicked
-    function changeColor() {
-      // Pick a random color from the colors list
-      const randomIndex = Math.floor(Math.random() * colors.length);
-      const randomColor = colors[randomIndex];
+    // Close the sidebar when the arrow inside it is clicked
+    closeSidebarBtn.addEventListener('click', () => {
+      historySidebar.classList.remove('open');
+    });
 
-      // Change the page's background color to the random color we picked
-      document.body.style.backgroundColor = randomColor;
+    function checkItem() {
+      // Show a spinning wheel plus a loading message first
+      resultText.innerHTML = '<span class="spinner"></span> Thinking...';
+
+      // Simulate a delay while it "thinks", then show the answer
+      // TODO: replace with real recycling logic later
+      setTimeout(() => {
+        resultText.textContent = 'Yes, that can be recycled!';
+      }, 1000);
     }
-  </script>
 
+    submitBtn.addEventListener('click', checkItem);
+
+    // Let the user press Enter in the input box to submit too
+    itemInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        checkItem();
+      }
+    });
+  </script>
 </body>
 </html>
