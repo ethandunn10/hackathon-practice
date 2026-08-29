@@ -196,9 +196,10 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const SUPABASE_URL = 'https://ujlmdyzprrgmpqdmoxoe.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_N_NI3Id_FU5snZguJuGu9w_AqTu7T30';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Fetched from the server's /api/config route, which reads them from .env —
+    // keeps these values out of the source instead of hardcoding them here.
+    const { supabaseUrl, supabaseKey } = await fetch('/api/config').then((res) => res.json());
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const itemInput = document.getElementById('itemInput');
     const submitBtn = document.getElementById('submitBtn');
@@ -252,45 +253,11 @@
       historySidebar.classList.remove('open');
     });
 
-    // Keyword lists used to decide a verdict. Checked in this order (not-recyclable
-    // first) since a few phrases could otherwise match more than one list.
-    const notRecyclableKeywords = [
-      'styrofoam', 'foam cup', 'foam plate', 'plastic bag', 'plastic wrap',
-      'saran wrap', 'chip bag', 'candy wrapper', 'snack wrapper', 'paper towel',
-      'napkin', 'tissue', 'diaper', 'broken glass', 'mirror', 'ceramic',
-      'light bulb', 'plastic straw', 'cigarette', 'plastic utensil',
-      'plastic fork', 'plastic spoon', 'plastic knife', 'rubber band', 'balloon',
-    ];
-
-    const recyclableKeywords = [
-      'cardboard', 'newspaper', 'magazine', 'cereal box', 'glass bottle',
-      'glass jar', 'aluminum can', 'soda can', 'tin can', 'steel can',
-      'plastic bottle', 'water bottle', 'milk jug', 'plastic jug', 'paper bag',
-      'envelope', 'junk mail', 'phone book', 'aluminum foil', 'paper',
-    ];
-
-    const dependsKeywords = [
-      'battery', 'electronics', 'phone', 'laptop', 'computer', 'paint can',
-      'aerosol can', 'yogurt cup', 'take-out container', 'takeout container',
-      'pizza box', 'coffee cup', 'juice carton', 'tetra pak', 'clothing',
-      'shoes', 'mattress', 'propane tank', 'medicine', 'motor oil',
-      'plastic container',
-    ];
-
     const verdictMessages = {
       yes: 'Yes, that can be recycled!',
       no: "No, that can't be recycled.",
       depends: 'It depends — check your local recycling guidelines.',
     };
-
-    function getVerdict(itemName) {
-      const lower = itemName.toLowerCase();
-      if (notRecyclableKeywords.some((keyword) => lower.includes(keyword))) return 'no';
-      if (recyclableKeywords.some((keyword) => lower.includes(keyword))) return 'yes';
-      // Either a known "it depends" item, or an item we don't recognize —
-      // both cases fall back to the same honest answer rather than guessing.
-      return 'depends';
-    }
 
     async function checkItem() {
       const itemName = itemInput.value.trim();
@@ -299,10 +266,15 @@
       // Show a spinning wheel plus a loading message first
       resultText.innerHTML = '<span class="spinner"></span> Thinking...';
 
-      // Simulate a short delay so "Thinking..." is visible, then show the answer
-      setTimeout(async () => {
-        const verdict = getVerdict(itemName); // 'yes' | 'no' | 'depends'
-        resultText.textContent = verdictMessages[verdict];
+      try {
+        // Ask Claude (via our server, which holds the API key) for a verdict
+        const checkResponse = await fetch('/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemName }),
+        });
+        const { verdict } = await checkResponse.json(); // 'yes' | 'no' | 'depends'
+        resultText.textContent = verdictMessages[verdict] ?? verdictMessages.depends;
 
         const { error } = await supabase
           .from('recycle_log')
@@ -313,7 +285,10 @@
         } else {
           renderHistory();
         }
-      }, 1000);
+      } catch (error) {
+        console.error('Failed to check item:', error);
+        resultText.textContent = 'Something went wrong — please try again.';
+      }
     }
 
     submitBtn.addEventListener('click', checkItem);
