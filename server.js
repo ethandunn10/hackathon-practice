@@ -27,10 +27,15 @@ app.post('/api/check', async (req, res) => {
   }
 });
 
-// Local dev only — on Vercel, files under public/ are served directly by the
-// CDN and express.static() is ignored, per Vercel's Express deployment model.
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+// Only bind a port for local dev (`node server.js`). On Vercel, this file is
+// required as a module and the exported `app` handles requests directly —
+// it never actually calls listen().
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
