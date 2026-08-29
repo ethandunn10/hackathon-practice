@@ -193,16 +193,57 @@
     </ul>
   </div>
 
-  <script>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const SUPABASE_URL = 'https://ujlmdyzprrgmpqdmoxoe.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_N_NI3Id_FU5snZguJuGu9w_AqTu7T30';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const itemInput = document.getElementById('itemInput');
     const submitBtn = document.getElementById('submitBtn');
     const resultText = document.getElementById('resultText');
     const historyBtn = document.getElementById('historyBtn');
     const historySidebar = document.getElementById('historySidebar');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+    const historyList = document.getElementById('historyList');
 
-    // Open the sidebar when the History button is clicked
+    const verdictLabels = { yes: 'Yes', no: 'No', depends: 'Depends' };
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function renderHistory() {
+      const { data, error } = await supabase
+        .from('recycle_log')
+        .select('item_name, is_recyclable, checked_at')
+        .order('checked_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Failed to load recycle_log history:', error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        historyList.innerHTML = '<li>You have none yet</li>';
+        return;
+      }
+
+      historyList.innerHTML = data
+        .map((row) => {
+          const label = verdictLabels[row.is_recyclable] ?? row.is_recyclable;
+          return `<li>${escapeHtml(row.item_name)} — ${label}</li>`;
+        })
+        .join('');
+    }
+
+    // Open the sidebar when the History button is clicked, refreshing the list first
     historyBtn.addEventListener('click', () => {
+      renderHistory();
       historySidebar.classList.add('open');
     });
 
@@ -211,14 +252,28 @@
       historySidebar.classList.remove('open');
     });
 
-    function checkItem() {
+    async function checkItem() {
+      const itemName = itemInput.value.trim();
+      if (!itemName) return;
+
       // Show a spinning wheel plus a loading message first
       resultText.innerHTML = '<span class="spinner"></span> Thinking...';
 
       // Simulate a delay while it "thinks", then show the answer
       // TODO: replace with real recycling logic later
-      setTimeout(() => {
+      setTimeout(async () => {
+        const verdict = 'yes'; // matches is_recyclable's allowed values: 'yes' | 'no' | 'depends'
         resultText.textContent = 'Yes, that can be recycled!';
+
+        const { error } = await supabase
+          .from('recycle_log')
+          .insert({ item_name: itemName, is_recyclable: verdict });
+
+        if (error) {
+          console.error('Failed to save recycle_log row:', error);
+        } else {
+          renderHistory();
+        }
       }, 1000);
     }
 
