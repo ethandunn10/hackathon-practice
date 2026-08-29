@@ -28,20 +28,37 @@ app.post('/api/check', async (req, res) => {
   try {
     const response = await anthropic.messages.create({
       model: 'claude-opus-5',
-      max_tokens: 256,
+      max_tokens: 500,
       output_config: { effort: 'low' },
       system:
         'You are a recycling expert. Given the name of an item, decide whether it ' +
-        'can typically be recycled in a standard curbside recycling program. ' +
-        'Respond with ONLY one lowercase word: "yes", "no", or "depends" — no other text.',
+        'can typically be recycled in a standard curbside recycling program.\n' +
+        'Respond with ONLY a JSON object (no markdown, no code fences) in this exact shape:\n' +
+        '{"verdict": "yes" | "no" | "depends", ' +
+        '"reasoning": "1-2 sentence explanation of the verdict", ' +
+        '"tip": "one practical how-to tip for preparing or disposing of this item"}',
       messages: [{ role: 'user', content: itemName }],
     });
 
     const textBlock = response.content.find((block) => block.type === 'text');
-    const raw = (textBlock?.text || '').trim().toLowerCase();
-    const verdict = ['yes', 'no', 'depends'].includes(raw) ? raw : 'depends';
+    const raw = (textBlock?.text || '').trim();
 
-    res.json({ verdict });
+    let parsed = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseError) {
+      console.error('Failed to parse Claude response as JSON:', raw);
+    }
+
+    const verdict = ['yes', 'no', 'depends'].includes(parsed.verdict) ? parsed.verdict : 'depends';
+    const reasoning = typeof parsed.reasoning === 'string' && parsed.reasoning
+      ? parsed.reasoning
+      : 'Not sure about that one — check your local recycling guidelines.';
+    const tip = typeof parsed.tip === 'string' && parsed.tip
+      ? parsed.tip
+      : "When in doubt, rinse it out and check your local program's rules.";
+
+    res.json({ verdict, reasoning, tip });
   } catch (error) {
     console.error('Anthropic API error:', error);
     res.status(500).json({ error: 'Failed to get a verdict' });

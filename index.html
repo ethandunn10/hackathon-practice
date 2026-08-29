@@ -88,6 +88,22 @@
     gap: 0.75rem;
   }
 
+  #resultReasoning {
+    margin-top: 0.75rem;
+    font-size: 1rem;
+    color: #ccc;
+    text-align: center;
+    max-width: 560px;
+  }
+
+  #resultTip {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--green-accent);
+    text-align: center;
+    max-width: 560px;
+  }
+
   /* Spinning wheel shown while "thinking" */
   .spinner {
     width: 1.25rem;
@@ -181,6 +197,10 @@
 
     <!-- Placeholder text shown after clicking submit; empty until then -->
     <p id="resultText"></p>
+    <!-- Claude's reasoning behind the verdict -->
+    <p id="resultReasoning"></p>
+    <!-- A practical how-to tip for handling the item -->
+    <p id="resultTip"></p>
   </div>
 
   <!-- Sidebar showing past recycled items; hidden until the History button is clicked -->
@@ -204,6 +224,8 @@
     const itemInput = document.getElementById('itemInput');
     const submitBtn = document.getElementById('submitBtn');
     const resultText = document.getElementById('resultText');
+    const resultReasoning = document.getElementById('resultReasoning');
+    const resultTip = document.getElementById('resultTip');
     const historyBtn = document.getElementById('historyBtn');
     const historySidebar = document.getElementById('historySidebar');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
@@ -265,6 +287,8 @@
 
       // Show a spinning wheel plus a loading message first
       resultText.innerHTML = '<span class="spinner"></span> Thinking...';
+      resultReasoning.textContent = '';
+      resultTip.textContent = '';
 
       try {
         // Ask Claude (via our server, which holds the API key) for a verdict
@@ -273,8 +297,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ itemName }),
         });
-        const { verdict } = await checkResponse.json(); // 'yes' | 'no' | 'depends'
+        const { verdict, reasoning, tip } = await checkResponse.json(); // verdict: 'yes' | 'no' | 'depends'
         resultText.textContent = verdictMessages[verdict] ?? verdictMessages.depends;
+        resultReasoning.textContent = reasoning ?? '';
+        resultTip.textContent = tip ? `💡 Tip: ${tip}` : '';
 
         const { error } = await supabase
           .from('recycle_log')
