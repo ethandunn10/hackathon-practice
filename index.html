@@ -252,6 +252,46 @@
       historySidebar.classList.remove('open');
     });
 
+    // Keyword lists used to decide a verdict. Checked in this order (not-recyclable
+    // first) since a few phrases could otherwise match more than one list.
+    const notRecyclableKeywords = [
+      'styrofoam', 'foam cup', 'foam plate', 'plastic bag', 'plastic wrap',
+      'saran wrap', 'chip bag', 'candy wrapper', 'snack wrapper', 'paper towel',
+      'napkin', 'tissue', 'diaper', 'broken glass', 'mirror', 'ceramic',
+      'light bulb', 'plastic straw', 'cigarette', 'plastic utensil',
+      'plastic fork', 'plastic spoon', 'plastic knife', 'rubber band', 'balloon',
+    ];
+
+    const recyclableKeywords = [
+      'cardboard', 'newspaper', 'magazine', 'cereal box', 'glass bottle',
+      'glass jar', 'aluminum can', 'soda can', 'tin can', 'steel can',
+      'plastic bottle', 'water bottle', 'milk jug', 'plastic jug', 'paper bag',
+      'envelope', 'junk mail', 'phone book', 'aluminum foil', 'paper',
+    ];
+
+    const dependsKeywords = [
+      'battery', 'electronics', 'phone', 'laptop', 'computer', 'paint can',
+      'aerosol can', 'yogurt cup', 'take-out container', 'takeout container',
+      'pizza box', 'coffee cup', 'juice carton', 'tetra pak', 'clothing',
+      'shoes', 'mattress', 'propane tank', 'medicine', 'motor oil',
+      'plastic container',
+    ];
+
+    const verdictMessages = {
+      yes: 'Yes, that can be recycled!',
+      no: "No, that can't be recycled.",
+      depends: 'It depends — check your local recycling guidelines.',
+    };
+
+    function getVerdict(itemName) {
+      const lower = itemName.toLowerCase();
+      if (notRecyclableKeywords.some((keyword) => lower.includes(keyword))) return 'no';
+      if (recyclableKeywords.some((keyword) => lower.includes(keyword))) return 'yes';
+      // Either a known "it depends" item, or an item we don't recognize —
+      // both cases fall back to the same honest answer rather than guessing.
+      return 'depends';
+    }
+
     async function checkItem() {
       const itemName = itemInput.value.trim();
       if (!itemName) return;
@@ -259,11 +299,10 @@
       // Show a spinning wheel plus a loading message first
       resultText.innerHTML = '<span class="spinner"></span> Thinking...';
 
-      // Simulate a delay while it "thinks", then show the answer
-      // TODO: replace with real recycling logic later
+      // Simulate a short delay so "Thinking..." is visible, then show the answer
       setTimeout(async () => {
-        const verdict = 'yes'; // matches is_recyclable's allowed values: 'yes' | 'no' | 'depends'
-        resultText.textContent = 'Yes, that can be recycled!';
+        const verdict = getVerdict(itemName); // 'yes' | 'no' | 'depends'
+        resultText.textContent = verdictMessages[verdict];
 
         const { error } = await supabase
           .from('recycle_log')
