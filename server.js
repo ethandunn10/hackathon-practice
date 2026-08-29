@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const { getSupabaseConfig, checkItem } = require('./lib/handlers');
 
 const app = express();
@@ -26,7 +27,9 @@ app.post('/api/check', async (req, res) => {
   }
 });
 
-app.use(express.static(__dirname));
+// Local dev only — on Vercel, files under public/ are served directly by the
+// CDN and express.static() is ignored, per Vercel's Express deployment model.
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
