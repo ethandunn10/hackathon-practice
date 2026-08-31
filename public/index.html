@@ -231,7 +231,7 @@
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
     const historyList = document.getElementById('historyList');
 
-    const verdictLabels = { yes: 'Yes', no: 'No', depends: 'Depends' };
+    const verdictLabels = { yes: 'Yes', no: 'No', ambiguous: 'Ambiguous' };
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -278,7 +278,7 @@
     const verdictMessages = {
       yes: 'Yes, that can be recycled!',
       no: "No, that can't be recycled.",
-      depends: 'It depends — check your local recycling guidelines.',
+      ambiguous: "It's ambiguous — check your local recycling guidelines.",
     };
 
     async function checkItem() {
@@ -297,9 +297,9 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ itemName }),
         });
-        const { verdict, reasoning, tip } = await checkResponse.json(); // verdict: 'yes' | 'no' | 'depends'
-        resultText.textContent = verdictMessages[verdict] ?? verdictMessages.depends;
-        resultReasoning.textContent = reasoning ?? '';
+        const { verdict, followup, tip } = await checkResponse.json(); // verdict: 'yes' | 'no' | 'ambiguous'
+        resultText.textContent = verdictMessages[verdict] ?? verdictMessages.ambiguous;
+        resultReasoning.textContent = followup && followup !== 'none' ? followup : '';
         resultTip.textContent = tip ? `💡 Tip: ${tip}` : '';
 
         const { error } = await supabase
