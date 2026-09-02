@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { getSupabaseConfig, checkItem } = require('./lib/handlers');
+const { getSupabaseConfig, checkItem, checkItemFollowup } = require('./lib/handlers');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +24,23 @@ app.post('/api/check', async (req, res) => {
   } catch (error) {
     console.error('Anthropic API error:', error);
     res.status(500).json({ error: 'Failed to get a verdict' });
+  }
+});
+
+app.post('/api/check-followup', async (req, res) => {
+  const itemName = (req.body?.itemName || '').trim();
+  const question = (req.body?.question || '').trim();
+  const answer = (req.body?.answer || '').trim();
+  if (!itemName || !question || !answer) {
+    return res.status(400).json({ error: 'itemName, question, and answer are required' });
+  }
+
+  try {
+    const result = await checkItemFollowup(itemName, question, answer);
+    res.json(result);
+  } catch (error) {
+    console.error('Anthropic API error:', error);
+    res.status(500).json({ error: 'Failed to get a final verdict' });
   }
 });
 

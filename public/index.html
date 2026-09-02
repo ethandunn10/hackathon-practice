@@ -104,6 +104,78 @@
     max-width: 560px;
   }
 
+  /* Full-screen overlay shown when Claude needs a follow-up answer before it
+     can give a final verdict. Visibility is toggled with the .open class
+     (not the `hidden` attribute) so it can't be silently overridden by the
+     display rule below. */
+  #followupModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  #followupModal.open {
+    display: flex;
+  }
+
+  .followup-box {
+    background-color: #10151c;
+    border: 2px solid var(--blue-accent);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  #followupQuestionText {
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0;
+  }
+
+  #followupInput {
+    padding: 1rem 1.25rem;
+    font-size: 1.2rem;
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid var(--blue-accent);
+    border-radius: 10px;
+    background-color: #1a1f26;
+    color: var(--text-color);
+  }
+
+  #followupInput:focus {
+    outline: none;
+    border-color: var(--green-accent);
+  }
+
+  #followupSubmitBtn {
+    padding: 1rem 1.5rem;
+    font-size: 1.2rem;
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+  }
+
+  #followupSubmitBtn:hover {
+    filter: brightness(1.15);
+  }
+
   /* Spinning wheel shown while "thinking" */
   .spinner {
     width: 1.25rem;
@@ -203,6 +275,17 @@
     <p id="resultTip"></p>
   </div>
 
+  <!-- Modal shown when Claude needs a follow-up answer before it can give a final
+       verdict. Has its own input + submit button, separate from the item input,
+       so an answer here is never mistaken for a new item to check. -->
+  <div id="followupModal">
+    <div class="followup-box">
+      <p id="followupQuestionText"></p>
+      <input type="text" id="followupInput" placeholder="Your answer">
+      <button id="followupSubmitBtn">Submit answer</button>
+    </div>
+  </div>
+
   <!-- Sidebar showing past recycled items; hidden until the History button is clicked -->
   <div id="historySidebar">
     <!-- Arrow to close the sidebar -->
@@ -226,6 +309,10 @@
     const resultText = document.getElementById('resultText');
     const resultReasoning = document.getElementById('resultReasoning');
     const resultTip = document.getElementById('resultTip');
+    const followupModal = document.getElementById('followupModal');
+    const followupQuestionText = document.getElementById('followupQuestionText');
+    const followupInput = document.getElementById('followupInput');
+    const followupSubmitBtn = document.getElementById('followupSubmitBtn');
     const historyBtn = document.getElementById('historyBtn');
     const historySidebar = document.getElementById('historySidebar');
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
@@ -281,7 +368,44 @@
       ambiguous: "It's ambiguous — check your local recycling guidelines.",
     };
 
+    // Tracks the item + question we're waiting on an answer for. While this is
+    // set, the app is not expecting a new item — the original input is
+    // disabled and checkItem() bails out, so an answer can't be misread as a
+    // fresh item to check.
+    let pendingFollowup = null; // { itemName, question } | null
+
+    function openFollowupModal(itemName, question) {
+      pendingFollowup = { itemName, question };
+      followupQuestionText.textContent = question;
+      followupInput.value = '';
+      followupModal.classList.add('open');
+      itemInput.disabled = true;
+      submitBtn.disabled = true;
+      followupInput.focus();
+    }
+
+    function closeFollowupModal() {
+      pendingFollowup = null;
+      followupModal.classList.remove('open');
+      itemInput.disabled = false;
+      submitBtn.disabled = false;
+    }
+
+    async function logResult(itemName, verdict) {
+      const { error } = await supabase
+        .from('recycle_log')
+        .insert({ item_name: itemName, is_recyclable: verdict });
+
+      if (error) {
+        console.error('Failed to save recycle_log row:', error);
+      } else {
+        renderHistory();
+      }
+    }
+
     async function checkItem() {
+      if (pendingFollowup) return;
+
       const itemName = itemInput.value.trim();
       if (!itemName) return;
 
@@ -299,30 +423,63 @@
         });
         const { verdict, followup, tip } = await checkResponse.json(); // verdict: 'yes' | 'no' | 'ambiguous'
         resultText.textContent = verdictMessages[verdict] ?? verdictMessages.ambiguous;
-        resultReasoning.textContent = followup && followup !== 'none' ? followup : '';
         resultTip.textContent = tip ? `💡 Tip: ${tip}` : '';
 
-        const { error } = await supabase
-          .from('recycle_log')
-          .insert({ item_name: itemName, is_recyclable: verdict });
-
-        if (error) {
-          console.error('Failed to save recycle_log row:', error);
-        } else {
-          renderHistory();
+        if (followup && followup !== 'none') {
+          openFollowupModal(itemName, followup);
         }
+
+        await logResult(itemName, verdict);
       } catch (error) {
         console.error('Failed to check item:', error);
         resultText.textContent = 'Something went wrong — please try again.';
       }
     }
 
+    async function submitFollowupAnswer() {
+      const answer = followupInput.value.trim();
+      if (!answer || !pendingFollowup) return;
+
+      const { itemName, question } = pendingFollowup;
+
+      // Same loading treatment as the one-shot check above
+      resultText.innerHTML = '<span class="spinner"></span> Thinking...';
+      resultTip.textContent = '';
+
+      try {
+        // Second AI call: original item + the question Claude asked + the
+        // user's answer, for one decisive final verdict
+        const checkResponse = await fetch('/api/check-followup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemName, question, answer }),
+        });
+        const { verdict, tip } = await checkResponse.json(); // verdict: 'yes' | 'no' | 'ambiguous'
+
+        resultText.textContent = verdictMessages[verdict] ?? verdictMessages.ambiguous;
+        resultTip.textContent = tip ? `💡 Tip: ${tip}` : '';
+
+        closeFollowupModal();
+        await logResult(itemName, verdict);
+      } catch (error) {
+        console.error('Failed to check follow-up answer:', error);
+        resultText.textContent = 'Something went wrong — please try again.';
+      }
+    }
+
     submitBtn.addEventListener('click', checkItem);
+    followupSubmitBtn.addEventListener('click', submitFollowupAnswer);
 
     // Let the user press Enter in the input box to submit too
     itemInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         checkItem();
+      }
+    });
+
+    followupInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        submitFollowupAnswer();
       }
     });
   </script>
