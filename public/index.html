@@ -4,104 +4,181 @@
 <meta charset="UTF-8">
 <title>Should I Recycle This?</title>
 <style>
-  /* Dark theme colors, defined once so they're easy to change later */
+  /* Design tokens — a refined dark palette (deep slate surfaces, emerald +
+     sky-blue accents) so colors, radii, and shadows stay consistent and easy
+     to retune from one place. */
   :root {
-    --bg-color: #0b0f14;       /* near-black background */
-    --blue-accent: #4da6ff;    /* used for title + input border */
-    --green-accent: #4caf50;   /* used for button */
-    --text-color: #e6e6e6;
+    color-scheme: dark;
+    --bg: #0a0e16;
+    --surface: #131a24;
+    --surface-2: #1a2330;
+    --border: #253044;
+    --border-strong: #34415a;
+    --text: #eef2f6;
+    --text-muted: #96a3b8;
+    --text-faint: #616f82;
+    --accent: #34d399;      /* emerald */
+    --accent-2: #38bdf8;    /* sky blue */
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
   }
 
   body {
     margin: 0;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: system-ui, sans-serif;
-    /* A more colorful dark gradient: blue -> teal -> green -> purple */
-    background: linear-gradient(135deg, #0d1b3d 0%, #0a2b3d 30%, #0b3d2b 60%, #1e0b3d 100%);
-    color: var(--text-color);
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    position: relative;
+    padding: 3rem 1.5rem;
+  }
+
+  /* Soft, purely decorative ambient glow behind the content */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 18% 15%, rgba(56, 189, 248, 0.16), transparent 45%),
+      radial-gradient(circle at 82% 85%, rgba(52, 211, 153, 0.14), transparent 45%);
+    pointer-events: none;
+    z-index: 0;
   }
 
   h1 {
-    font-size: 3rem;
-    /* Title text itself fades from blue to green */
-    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
+    position: relative;
+    z-index: 1;
+    font-size: clamp(2.25rem, 5.5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    margin-bottom: 3rem;
+    margin: 0 0 2.5rem;
     text-align: center;
   }
 
-  /* Groups the input and button together, sized to fill most of the page */
+  /* Card that groups the input, button, and result together */
   .form-container {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-    width: 80%;
-    max-width: 700px;
+    align-items: stretch;
+    gap: 1.75rem;
+    width: 100%;
+    max-width: 560px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem 2rem;
+    box-shadow: var(--shadow-lg);
   }
 
   #itemInput {
-    padding: 1.25rem 1.5rem;
-    font-size: 1.5rem;
+    padding: 1.15rem 1.3rem;
+    font-size: 1.2rem;
     width: 100%;
-    box-sizing: border-box;
-    border: 2px solid var(--blue-accent);
-    border-radius: 12px;
-    background-color: #1a1f26;
-    color: var(--text-color);
+    font-family: inherit;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-2);
+    color: var(--text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  #itemInput::placeholder {
+    color: var(--text-faint);
   }
 
   #itemInput:focus {
     outline: none;
-    border-color: var(--green-accent);
+    border-color: var(--accent-2);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+  }
+
+  #itemInput:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   #submitBtn {
-    padding: 1.5rem 2rem;
-    font-size: 1.75rem;
+    padding: 1.25rem 1.75rem;
+    font-size: 1.25rem;
+    font-weight: 600;
     width: 100%;
     border: none;
-    border-radius: 12px;
-    /* Blue-to-green fade on the button */
-    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
-    color: #fff;
+    border-radius: var(--radius-md);
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+    color: #06251c;
     cursor: pointer;
-    transition: filter 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    transition: filter 0.15s ease, transform 0.15s ease;
   }
 
   #submitBtn:hover {
-    filter: brightness(1.15);
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  #submitBtn:active {
+    transform: translateY(0);
+  }
+
+  #submitBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 
   #resultText {
-    margin-top: 2rem;
-    font-size: 1.25rem;
+    margin: 0.25rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 600;
     text-align: center;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 0.6rem;
   }
 
   #resultReasoning {
-    margin-top: 0.75rem;
-    font-size: 1rem;
-    color: #ccc;
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text-muted);
     text-align: center;
-    max-width: 560px;
   }
 
   #resultTip {
-    margin-top: 0.5rem;
-    font-size: 0.95rem;
-    color: var(--green-accent);
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--accent);
     text-align: center;
-    max-width: 560px;
+    line-height: 1.5;
+  }
+
+  /* Collapse empty result/status paragraphs so the card doesn't reserve
+     blank gap for text that hasn't been filled in yet */
+  #resultText:empty,
+  #resultReasoning:empty,
+  #resultTip:empty {
+    display: none;
   }
 
   /* Full-screen overlay shown when Claude needs a follow-up answer before it
@@ -112,12 +189,12 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(5, 8, 12, 0.72);
+    backdrop-filter: blur(4px);
     align-items: center;
     justify-content: center;
     z-index: 100;
     padding: 1.5rem;
-    box-sizing: border-box;
   }
 
   #followupModal.open {
@@ -125,65 +202,95 @@
   }
 
   .followup-box {
-    background-color: #10151c;
-    border: 2px solid var(--blue-accent);
-    border-radius: 16px;
-    padding: 2rem;
-    max-width: 500px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem;
+    max-width: 480px;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    gap: 1.6rem;
+    box-shadow: var(--shadow-lg);
   }
 
   #followupQuestionText {
     font-size: 1.5rem;
     font-weight: 600;
+    line-height: 1.4;
     text-align: center;
     margin: 0;
+    color: var(--text);
   }
 
   #followupInput {
-    padding: 1rem 1.25rem;
+    padding: 1.05rem 1.25rem;
     font-size: 1.2rem;
     width: 100%;
-    box-sizing: border-box;
-    border: 2px solid var(--blue-accent);
-    border-radius: 10px;
-    background-color: #1a1f26;
-    color: var(--text-color);
+    font-family: inherit;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-2);
+    color: var(--text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  #followupInput::placeholder {
+    color: var(--text-faint);
   }
 
   #followupInput:focus {
     outline: none;
-    border-color: var(--green-accent);
+    border-color: var(--accent-2);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+  }
+
+  #followupInput:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   #followupSubmitBtn {
-    padding: 1rem 1.5rem;
+    padding: 1.15rem 1.5rem;
     font-size: 1.2rem;
+    font-weight: 600;
     width: 100%;
     border: none;
-    border-radius: 10px;
-    background: linear-gradient(90deg, var(--blue-accent), var(--green-accent));
-    color: #fff;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+    color: #06251c;
     cursor: pointer;
-    transition: filter 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    transition: filter 0.15s ease, transform 0.15s ease;
   }
 
   #followupSubmitBtn:hover {
-    filter: brightness(1.15);
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  #followupSubmitBtn:active {
+    transform: translateY(0);
+  }
+
+  #followupSubmitBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 
   /* Spinning wheel shown while "thinking" */
   .spinner {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.2rem;
+    height: 1.2rem;
     border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top-color: var(--green-accent);
+    border-top-color: currentColor;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
   }
 
   @keyframes spin {
@@ -192,37 +299,43 @@
 
   /* Button at the top that opens the history sidebar */
   #historyBtn {
-    position: absolute;
+    position: fixed;
     top: 1.5rem;
-    right: 1.5rem;
-    padding: 0.6rem 1.1rem;
+    left: 1.5rem;
+    z-index: 2;
+    padding: 0.75rem 1.4rem;
     font-size: 1rem;
-    border: 2px solid var(--green-accent);
-    border-radius: 8px;
-    background-color: transparent;
-    color: var(--text-color);
+    font-weight: 600;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background-color: var(--surface);
+    color: var(--text);
     cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
   }
 
   #historyBtn:hover {
-    background-color: rgba(76, 175, 80, 0.15);
+    border-color: var(--accent);
+    background-color: var(--surface-2);
   }
 
-  /* Sidebar that slides in from the right */
+  /* Sidebar that slides in from the left */
   #historySidebar {
     position: fixed;
     top: 0;
-    right: 0;
+    left: 0;
     height: 100%;
-    width: 280px;
-    background-color: #10151c;
-    border-left: 2px solid var(--blue-accent);
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.4);
+    width: 300px;
+    max-width: 85vw;
+    background-color: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
     padding: 2rem 1.5rem;
-    box-sizing: border-box;
     /* Hidden off-screen until the "open" class is added */
-    transform: translateX(100%);
+    transform: translateX(-100%);
     transition: transform 0.3s ease;
+    z-index: 200;
+    overflow-y: auto;
   }
 
   #historySidebar.open {
@@ -230,27 +343,47 @@
   }
 
   #historySidebar h2 {
-    font-size: 1.25rem;
-    color: var(--green-accent);
-    margin-top: 0;
-    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin: 0 0 1.25rem;
   }
 
   /* Arrow button inside the sidebar that closes it */
   #closeSidebarBtn {
     background: none;
     border: none;
-    color: var(--blue-accent);
-    font-size: 1.5rem;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    line-height: 1;
     cursor: pointer;
     margin-bottom: 1rem;
+    padding: 0.25rem;
+    border-radius: 6px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  #closeSidebarBtn:hover {
+    color: var(--text);
+    background-color: var(--surface-2);
   }
 
   #historyList {
     list-style: none;
     padding: 0;
     margin: 0;
-    color: #aaa;
+  }
+
+  #historyList li {
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  #historyList li:last-child {
+    border-bottom: none;
   }
 </style>
 </head>
@@ -289,7 +422,7 @@
   <!-- Sidebar showing past recycled items; hidden until the History button is clicked -->
   <div id="historySidebar">
     <!-- Arrow to close the sidebar -->
-    <button id="closeSidebarBtn">&rarr;</button>
+    <button id="closeSidebarBtn">&larr;</button>
     <h2>Past Recycles</h2>
     <ul id="historyList">
       <li>You have none yet</li>
@@ -403,14 +536,25 @@
       }
     }
 
+    // Puts a button into/out of a disabled, spinner-showing "thinking" state.
+    // The spinner lives on whichever button was actually pressed, so it's
+    // always visible to the user — unlike a spinner placed in the results
+    // area, which the follow-up modal's backdrop would otherwise cover.
+    function setButtonLoading(button, isLoading, idleLabel) {
+      button.disabled = isLoading;
+      button.innerHTML = isLoading ? '<span class="spinner"></span> Thinking...' : idleLabel;
+    }
+
     async function checkItem() {
       if (pendingFollowup) return;
 
       const itemName = itemInput.value.trim();
       if (!itemName) return;
 
-      // Show a spinning wheel plus a loading message first
-      resultText.innerHTML = '<span class="spinner"></span> Thinking...';
+      itemInput.disabled = true;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Thinking...';
+      resultText.textContent = '';
       resultReasoning.textContent = '';
       resultTip.textContent = '';
 
@@ -433,6 +577,13 @@
       } catch (error) {
         console.error('Failed to check item:', error);
         resultText.textContent = 'Something went wrong — please try again.';
+      } finally {
+        submitBtn.innerHTML = 'Check';
+        // Leave itemInput/submitBtn disabled if a follow-up modal just opened
+        if (!pendingFollowup) {
+          itemInput.disabled = false;
+          submitBtn.disabled = false;
+        }
       }
     }
 
@@ -442,8 +593,9 @@
 
       const { itemName, question } = pendingFollowup;
 
-      // Same loading treatment as the one-shot check above
-      resultText.innerHTML = '<span class="spinner"></span> Thinking...';
+      followupInput.disabled = true;
+      setButtonLoading(followupSubmitBtn, true, 'Submit answer');
+      resultText.textContent = '';
       resultTip.textContent = '';
 
       try {
@@ -464,6 +616,9 @@
       } catch (error) {
         console.error('Failed to check follow-up answer:', error);
         resultText.textContent = 'Something went wrong — please try again.';
+      } finally {
+        followupInput.disabled = false;
+        setButtonLoading(followupSubmitBtn, false, 'Submit answer');
       }
     }
 
